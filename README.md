@@ -1,26 +1,33 @@
 # 三角形內角和探索
 
-## 探索任務
+繁體中文版三角形內角和探索網頁。
+
+## 查看網頁
+
+已建立 `index.html`。
+
+啟用 GitHub Pages 後，可以通過以下網址訪問：
+
+**https://cses87241.github.io/triangle-interior-angle-sum/**
+
+### 如何啟用 GitHub Pages
+1. 進入此倉庫設定：[Settings](https://github.com/cses87241/triangle-interior-angle-sum/settings/pages)
+2. 在 **Pages** 區塊，Source 選擇 **Deploy from a branch**
+3. Branch 選擇 **main**，資料夾選擇 **/(root)**
+4. 按 **Save**
+
+等待約1分鐘，網址即可使用。
+
+---
+
+## 內容概要
 
 拖動三角形的三個頂點，改變它的形狀。觀察三個內角分別是多少，再看看它們的和有沒有發生變化。
 
-A B C  
-拖動橙色圓點改變三角形
-
-**60°** 角 A  
-**60°** 角 B  
-**60°** 角 C  
-
-三個內角的和 **180°**
-
-試著把三角形變成不同的形狀，看看內角和是否改變。
-
-恢復三角形 發現規律
-
-拖動任意一個頂點開始探索。
+三個內角的和始終是 **180°**。
 
 ---
 
 原始來源：https://2026.anji.work/ze/jihe/4.html
 
-已轉換為繁體中文。
+已轉換為繁體中文並製作成獨立網頁。
