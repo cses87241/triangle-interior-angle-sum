@@ -7,12 +7,12 @@
   <style>
     body {
       font-family: "Microsoft JhengHei", "PingFang TC", "Noto Sans TC", sans-serif;
-      max-width: 800px;
-      margin: 40px auto;
+      max-width: 900px;
+      margin: 30px auto;
       padding: 20px;
       background: #f5f7fa;
       color: #333;
-      line-height: 1.7;
+      line-height: 1.6;
     }
     h1 {
       color: #2c3e50;
@@ -20,9 +20,7 @@
       border-bottom: 3px solid #3498db;
       padding-bottom: 10px;
     }
-    h2 {
-      color: #2980b9;
-    }
+    h2 { color: #2980b9; }
     .task-box {
       background: white;
       padding: 25px;
@@ -30,25 +28,53 @@
       box-shadow: 0 4px 15px rgba(0,0,0,0.1);
       margin: 20px 0;
     }
+    canvas {
+      display: block;
+      margin: 20px auto;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      background: #fff;
+      cursor: pointer;
+      touch-action: none;
+    }
     .angles {
       display: flex;
       justify-content: space-around;
       margin: 20px 0;
       font-size: 1.2em;
+      flex-wrap: wrap;
+      gap: 10px;
     }
     .angle {
       text-align: center;
       background: #ecf0f1;
-      padding: 15px 25px;
+      padding: 12px 20px;
       border-radius: 8px;
+      min-width: 100px;
     }
     .sum {
       text-align: center;
       font-size: 1.5em;
       font-weight: bold;
       color: #e74c3c;
-      margin: 25px 0;
+      margin: 20px 0;
     }
+    .controls {
+      text-align: center;
+      margin: 15px 0;
+    }
+    button {
+      background: #3498db;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      margin: 0 8px;
+      border-radius: 6px;
+      font-size: 1em;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    button:hover { background: #2980b9; }
     .note {
       background: #fff8e1;
       padding: 15px;
@@ -61,6 +87,11 @@
       color: #7f8c8d;
       font-size: 0.9em;
     }
+    .hint {
+      text-align: center;
+      color: #7f8c8d;
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
@@ -69,27 +100,175 @@
 
   <div class="task-box">
     <h2>探索任務</h2>
-    <p>拖動三角形的三個頂點，改變它的形狀。觀察三個內角分別是多少，再看看它們的和有沒有發生變化。</p>
+    <p>拖動三角形的三個頂點（橙色圓點），改變它的形狀。觀察三個內角分別是多少，再看看它們的和有沒有發生變化。</p>
+
+    <canvas id="triangleCanvas" width="600" height="400"></canvas>
+    <p class="hint">拖動橙色圓點改變三角形形狀</p>
 
     <div class="angles">
-      <div class="angle"><strong>60°</strong><br>角 A</div>
-      <div class="angle"><strong>60°</strong><br>角 B</div>
-      <div class="angle"><strong>60°</strong><br>角 C</div>
+      <div class="angle"><strong id="angleA">60°</strong><br>角 A</div>
+      <div class="angle"><strong id="angleB">60°</strong><br>角 B</div>
+      <div class="angle"><strong id="angleC">60°</strong><br>角 C</div>
     </div>
 
-    <div class="sum">三個內角的和：<strong>180°</strong></div>
+    <div class="sum">三個內角的和：<strong id="sumAngle">180°</strong></div>
+
+    <div class="controls">
+      <button onclick="resetTriangle()">恢復三角形</button>
+      <button onclick="showPattern()">發現規律</button>
+    </div>
 
     <p>試著把三角形變成不同的形狀，看看內角和是否改變。</p>
-    <p>拖動任意一個頂點開始探索。</p>
   </div>
 
-  <div class="note">
-    <strong>發現規律：</strong>不論三角形的形狀如何改變，三個內角的和始終是 <strong>180°</strong>。
+  <div class="note" id="patternNote" style="display:none;">
+    <strong>發現規律：</strong>不論三角形的形狀如何改變，三個內角的和始終是 <strong>180°</strong>。這是三角形的基本性質。
   </div>
 
   <footer>
     原始來源：<a href="https://2026.anji.work/ze/jihe/4.html" target="_blank">https://2026.anji.work/ze/jihe/4.html</a><br>
-    已轉換為繁體中文並重新製作網頁。
+    已轉換為繁體中文，並加入互動拖動功能。
   </footer>
+
+  <script>
+    const canvas = document.getElementById('triangleCanvas');
+    const ctx = canvas.getContext('2d');
+    const angleAEl = document.getElementById('angleA');
+    const angleBEl = document.getElementById('angleB');
+    const angleCEl = document.getElementById('angleC');
+    const sumEl = document.getElementById('sumAngle');
+
+    // 初始等邊三角形位置
+    let points = [
+      { x: 300, y: 80, label: 'A' },   // 頂點 A
+      { x: 150, y: 320, label: 'B' },  // 頂點 B
+      { x: 450, y: 320, label: 'C' }   // 頂點 C
+    ];
+    const initialPoints = JSON.parse(JSON.stringify(points));
+
+    let dragging = null;
+    const radius = 12;
+
+    function getMousePos(e) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+      const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+      return {
+        x: (clientX - rect.left) * scaleX,
+        y: (clientY - rect.top) * scaleY
+      };
+    }
+
+    function dist(p1, p2) {
+      return Math.hypot(p1.x - p2.x, p1.y - p2.y);
+    }
+
+    // 計算三角形內角（度）
+    function calculateAngles() {
+      const a = dist(points[1], points[2]); // 對角於 A
+      const b = dist(points[0], points[2]); // 對角於 B
+      const c = dist(points[0], points[1]); // 對角於 C
+
+      if (a < 1 || b < 1 || c < 1) return [60, 60, 60]; // 避免退化
+
+      const angleA = Math.acos(Math.max(-1, Math.min(1, (b*b + c*c - a*a) / (2*b*c)))) * 180 / Math.PI;
+      const angleB = Math.acos(Math.max(-1, Math.min(1, (a*a + c*c - b*b) / (2*a*c)))) * 180 / Math.PI;
+      const angleC = 180 - angleA - angleB; // 確保和為 180
+
+      return [angleA, angleB, angleC];
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // 畫三角形
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, points[0].y);
+      ctx.lineTo(points[1].x, points[1].y);
+      ctx.lineTo(points[2].x, points[2].y);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(52, 152, 219, 0.15)';
+      ctx.fill();
+      ctx.strokeStyle = '#2980b9';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      // 畫頂點（橙色）
+      points.forEach(p => {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+        ctx.fillStyle = '#e67e22';
+        ctx.fill();
+        ctx.strokeStyle = '#d35400';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // 標籤
+        ctx.fillStyle = '#2c3e50';
+        ctx.font = 'bold 18px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(p.label, p.x, p.y - radius - 12);
+      });
+
+      // 更新角度顯示
+      const angles = calculateAngles();
+      angleAEl.textContent = angles[0].toFixed(1) + '°';
+      angleBEl.textContent = angles[1].toFixed(1) + '°';
+      angleCEl.textContent = angles[2].toFixed(1) + '°';
+      const sum = angles[0] + angles[1] + angles[2];
+      sumEl.textContent = sum.toFixed(1) + '°';
+    }
+
+    function startDrag(e) {
+      e.preventDefault();
+      const pos = getMousePos(e);
+      for (let i = 0; i < points.length; i++) {
+        if (dist(pos, points[i]) < radius + 5) {
+          dragging = i;
+          break;
+        }
+      }
+    }
+
+    function drag(e) {
+      if (dragging === null) return;
+      e.preventDefault();
+      const pos = getMousePos(e);
+      points[dragging].x = Math.max(radius, Math.min(canvas.width - radius, pos.x));
+      points[dragging].y = Math.max(radius, Math.min(canvas.height - radius, pos.y));
+      draw();
+    }
+
+    function endDrag() {
+      dragging = null;
+    }
+
+    // 鼠標事件
+    canvas.addEventListener('mousedown', startDrag);
+    canvas.addEventListener('mousemove', drag);
+    canvas.addEventListener('mouseup', endDrag);
+    canvas.addEventListener('mouseleave', endDrag);
+
+    // 觸控事件
+    canvas.addEventListener('touchstart', startDrag, { passive: false });
+    canvas.addEventListener('touchmove', drag, { passive: false });
+    canvas.addEventListener('touchend', endDrag);
+
+    function resetTriangle() {
+      points = JSON.parse(JSON.stringify(initialPoints));
+      draw();
+      document.getElementById('patternNote').style.display = 'none';
+    }
+
+    function showPattern() {
+      document.getElementById('patternNote').style.display = 'block';
+    }
+
+    // 初始繪製
+    draw();
+  </script>
 </body>
 </html>
